@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>♟ ÉchecsMaster — Jouez en ligne</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --gold: #c9a84c;
+  --gold-light: #e8c96b;
+  --gold-dark: #8a6f2e;
+  --cream: #f5ead8;
+  --dark: #1a120b;
+  --dark2: #241910;
+  --dark3: #2e2015;
+  --brown: #4a2e1a;
+  --brown2: #6b3f22;
+  --white-sq: #f0d9b5;
+  --black-sq: #b58863;
+  --piece-white: #fffde7;
+  --piece-black: #1a120b;
+  --shadow: 0 8px 32px rgba(0,0,0,0.6);
+  --glow: 0 0 20px rgba(201,168,76,0.3);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Crimson Text', serif;
+  background: var(--dark);
+  color: var(--cream);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 20% 20%, rgba(201,168,76,0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(74,46,26,0.3) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== SCREENS ===== */
+.screen { display: none; position: relative; z-index: 1; }
+.screen.active { display: flex; }
+
+/* ===== AUTH SCREEN ===== */
+#screen-auth {
+  min-height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 2rem;
+}
+
+.auth-logo {
+  text-align: center;
+  animation: fadeInDown 0.8s ease;
+}
+
+.auth-logo .piece-icon {
+  font-size: 5rem;
+  display: block;
+  filter: drop-shadow(0 0 20px rgba(201,168,76,0.5));
+  animation: float 3s ease-in-out infinite;
+}
+
+.auth-logo h1 {
+  font-family: 'Cinzel', serif;
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 40px rgba(201,168,76,0.4);
+}
+
+.auth-logo p {
+  font-size: 1.2rem;
+  color: #a89070;
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
+.auth-card {
+  background: var(--dark2);
+  border: 1px solid var(--gold-dark);
+  border-radius: 16px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: var(--shadow), var(--glow);
+  animation: fadeInUp 0.8s ease 0.2s both;
+}
+
+.auth-card h2 {
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+  font-size: 1.4rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 1.2rem;
+}
+
+.form-group label {
+  display: block;
+  color: #a89070;
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.05em;
+}
+
+.form-group input {
+  width: 100%;
+  background: var(--dark3);
+  border: 1px solid var(--brown2);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: var(--cream);
+  font-family: 'Crimson Text', serif;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201,168,76,0.15);
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.85rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+  color: var(--dark);
+  box-shadow: 0 4px 16px rgba(201,168,76,0.3);
+}
+
+.btn-gold:hover {
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(201,168,76,0.4);
+}
+
+.auth-switch {
+  text-align: center;
+  margin-top: 1.2rem;
+  color: #a89070;
+  font-size: 0.95rem;
+}
+
+.auth-switch a {
+  color: var(--gold);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.auth-switch a:hover { text-decoration: underline; }
+
+/* ===== MAIN APP ===== */
+#screen-app {
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 2rem;
+  background: var(--dark2);
+  border-bottom: 1px solid var(--brown);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.5);
+}
+
+.header-logo {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: var(--gold);
+  font-size: 1.3rem;
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-nav { display: flex; gap: 0.5rem; }
+
+.nav-btn {
+  background: none;
+  border: none;
+  color: #a89070;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.nav-btn:hover, .nav-btn.active {
+  background: rgba(201,168,76,0.1);
+  color: var(--gold);
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--brown2);
+  border: 2px solid var(--gold-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.user-elo {
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+  font-size: 0.85rem;
+}
+
+/* ===== PAGES ===== */
+.page { display: none; flex: 1; }
+.page.active { display: flex; flex-direction: column; }
+
+/* ===== LOBBY ===== */
+#page-lobby {
+  padding: 2rem;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.lobby-welcome {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.lobby-welcome h2 {
+  font-family: 'Cinzel', serif;
+  font-size: 2rem;
+  color: var(--gold);
+}
+
+.lobby-welcome p { color: #a89070; margin-top: 0.3rem; }
+
+.lobby-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) { .lobby-grid { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--dark2);
+  border: 1px solid var(--brown);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.card h3 {
+  font-family: 'Cinzel', serif;
+  color: var(--gold);
+  font-size: 1.1rem;
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.stat-box {
+  background: var(--dark2);
+  border: 1px solid var(--brown);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat-value {
+  font-family: 'Cinzel', serif;
+  font-size: 1.8rem;
+  color: var(--gold);
+}
+
+.stat-label { font-size: 0.8rem; color: #a89070; margin-top: 0.2rem; }
+
+/* Toast Notifications */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--dark2);
+  border: 1px solid var(--brown2);
+  border-radius: 8px;
+  padding: 0.7rem 1.5rem;
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  color: var(--cream);
+  z-index: 9999;
+  transition: transform 0.3s ease;
+  pointer-events: none;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { border-color: #4ade80; color: #4ade80; }
+.toast.error { border-color: #f87171; color: #f87171; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<div id="screen-auth" class="screen active">
+  <div class="auth-logo">
+    <span class="piece-icon">♛</span>
+    <h1>ÉchecsMaster</h1>
+    <p>Jouez, progressez, régissez</p>
+  </div>
+
+  <div class="auth-card" id="auth-login">
+    <h2>Connexion</h2>
+    <div class="form-group">
+      <label>Pseudo</label>
+      <input type="text" id="login-username" placeholder="Votre pseudo">
+    </div>
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <input type="password" id="login-password" placeholder="••••••••">
+    </div>
+    <button class="btn btn-gold" onclick="loginWithPseudo()">Se connecter</button>
+    <div class="auth-switch">Pas encore de compte ? <a onclick="showRegister()">S'inscrire</a></div>
+  </div>
+
+  <div class="auth-card" id="auth-register" style="display:none">
+    <h2>Créer un compte</h2>
+    <div class="form-group">
+      <label>Pseudo (3 à 20 caractères)</label>
+      <input type="text" id="reg-username" placeholder="GrandMaître42" maxlength="20">
+    </div>
+    <div class="form-group">
+      <label>Mot de passe (Min. 6 caractères)</label>
+      <input type="password" id="reg-password" placeholder="••••••••">
+    </div>
+    <button class="btn btn-gold" onclick="registerWithPseudo()">Créer mon compte</button>
+    <div class="auth-switch">Déjà un compte ? <a onclick="showLogin()">Se connecter</a></div>
+  </div>
+</div>
+
+<div id="screen-app" class="screen">
+  <header class="header">
+    <div class="header-logo">♛ ÉchecsMaster</div>
+    <nav class="header-nav">
+      <button class="nav-btn active" onclick="showPage('lobby')">Salon</button>
+      <button class="nav-btn" onclick="logout()">Déconnexion</button>
+    </nav>
+    <div class="header-user">
+      <span class="user-elo" id="header-elo">1200</span>
+      <div class="user-avatar">
+        <span id="header-avatar-text">?</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="page-lobby" class="page active">
+    <div class="lobby-welcome">
+      <h2 id="lobby-greeting">Bienvenue !</h2>
+      <p>Prêt à lancer une partie d'échecs ?</p>
+    </div>
+    <div class="lobby-grid">
+      <div class="card">
+        <h3>📊 Mes statistiques</h3>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-value" id="stat-wins">0</div>
+            <div class="stat-label">Victoires</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-losses">0</div>
+            <div class="stat-label">Défaites</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-draws">0</div>
+            <div class="stat-label">Nulles</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-msg" class="toast"></div>
+
+<script>
+// RENSEIGNEZ VOS IDENTIFIANTS SUPABASE ICI
+const SUPABASE_URL = "https://VOTRE_PROJET.supabase.co";
+const SUPABASE_ANON_KEY = "VOTRE_ANON_KEY";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let currentProfile = null;
+
+// Gestion des changements d'écrans d'authentification
+function showRegister() {
+  document.getElementById('auth-login').style.display = 'none';
+  document.getElementById('auth-register').style.display = 'block';
+}
+
+function showLogin() {
+  document.getElementById('auth-register').style.display = 'none';
+  document.getElementById('auth-login').style.display = 'block';
+}
+
+// Notifications système
+function showToast(message, type = 'success') {
+  const toast = document.getElementById('toast-msg');
+  toast.innerText = message;
+  toast.className = `toast show ${type}`;
+  setTimeout(() => { toast.classList.remove('show'); }, 4000);
+}
+
+// Générateur d'email masqué transparent pour Supabase
+function generateFakeEmail(username) {
+  const cleanUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return `${cleanUsername}@echecmaster.local`;
+}
+
+// INSCRIPTION UNIQUEMENT PAR PSEUDO
+async function registerWithPseudo() {
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value;
+
+  if (username.length < 3 || username.length > 20) {
+    showToast("Le pseudo doit contenir entre 3 et 20 caractères.", "error");
+    return;
+  }
+  if (password.length < 6) {
+    showToast("Le mot de passe doit faire au moins 6 caractères.", "error");
+    return;
+  }
+
+  // Étape A : On vérifie si le pseudo est déjà pris dans la table des profils
+  const { data: existingUser, error: checkError } = await sb
+    .from('profiles')
+    .select('username')
+    .ilike('username', username)
+    .maybeSingle();
+
+  if (checkError) {
+    showToast("Erreur lors de la vérification du pseudo.", "error");
+    return;
+  }
+  if (existingUser) {
+    showToast("Ce pseudo est déjà utilisé par un autre joueur.", "error");
+    return;
+  }
+
+  // Étape B : Inscription auprès de Supabase Auth avec l'email calculé en tâche de fond
+  const fakeEmail = generateFakeEmail(username);
+  const { data, error } = await sb.auth.signUp({
+    email: fakeEmail,
+    password: password,
+    options: {
+      data: { username: username } // Transmis au Trigger SQL
+    }
+  });
+
+  if (error) {
+    showToast(error.message, "error");
+  } else if (data?.user) {
+    showToast("Compte créé avec succès !", "success");
+    currentUser = data.user;
+    await fetchProfile(data.user.id);
+    showApp();
+  }
+}
+
+// CONNEXION PAR PSEUDO
+async function loginWithPseudo() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+
+  if (!username || !password) {
+    showToast("Veuillez remplir tous les champs.", "error");
+    return;
+  }
+
+  // Étape A : Trouver le profil pour récupérer l'ID utilisateur (et reconstituer son email technique)
+  const { data: profile, error: profileError } = await sb
+    .from('profiles')
+    .select('username, id')
+    .ilike('username', username)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    showToast("Pseudo ou mot de passe incorrect.", "error");
+    return;
+  }
+
+  // Étape B : Connexion classique via l'email lié au pseudo trouvé
+  const fakeEmail = generateFakeEmail(profile.username);
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: fakeEmail,
+    password: password
+  });
+
+  if (error) {
+    showToast("Pseudo ou mot de passe incorrect.", "error");
+  } else if (data?.user) {
+    showToast("Connexion réussie !", "success");
+    currentUser = data.user;
+    currentProfile = profile;
+    await fetchProfile(data.user.id);
+    showApp();
+  }
+}
+
+// Récupérer les statistiques du joueur
+async function fetchProfile(userId) {
+  const { data, error } = await sb
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (!error && data) {
+    currentProfile = data;
+    // Mettre à jour l'interface
+    document.getElementById('lobby-greeting').innerText = `Bienvenue, ${data.username} !`;
+    document.getElementById('header-elo').innerText = data.elo;
+    document.getElementById('header-avatar-text').innerText = data.username.substring(0, 2).toUpperCase();
+    document.getElementById('stat-wins').innerText = data.wins;
+    document.getElementById('stat-losses').innerText = data.losses;
+    document.getElementById('stat-draws').innerText = data.draws;
+  }
+}
+
+function showApp() {
+  document.getElementById('screen-auth').classList.remove('active');
+  document.getElementById('screen-app').classList.add('active');
+}
+
+function showAuthScreen() {
+  document.getElementById('screen-app').classList.remove('active');
+  document.getElementById('screen-auth').classList.add('active');
+  showLogin();
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  currentUser = null;
+  currentProfile = null;
+  showAuthScreen();
+}
+
+// Initialisation au chargement de la page
+window.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    await fetchProfile(session.user.id);
+    showApp();
+  } else {
+    showAuthScreen();
+  }
+});
+</script>
+</body>
+</html>
